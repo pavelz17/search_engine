@@ -4,12 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
-import searchengine.dto.StartIndexingResponse;
-import searchengine.dto.StopIndexingResponse;
+import searchengine.dto.BaseResponse;
 import searchengine.exceptions.IncorrectMethodCallException;
 import searchengine.repositories.SiteRepository;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +20,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
 
 
     @Override
-    public StartIndexingResponse startIndexing() {
+    public BaseResponse startIndexing() {
         if(isIndexingRun()) {
             throw new IncorrectMethodCallException(START_INDEXING_ERROR_MESSAGE);
         }
@@ -31,19 +28,19 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         for (Site site : sites.getSites()) {
             
         }
-        StartIndexingResponse response = new StartIndexingResponse();
+        BaseResponse response = new BaseResponse();
         response.setResult(true);
         return response;
     }
 
     @Override
-    public StopIndexingResponse stopIndexing() {
+    public BaseResponse stopIndexing() {
         if(!isIndexingRun()) {
             throw new IncorrectMethodCallException(STOP_INDEXING_ERROR_MESSAGE);
         }
 
         indexingRun = false;
-        StopIndexingResponse response = new StopIndexingResponse();
+        BaseResponse response = new BaseResponse();
         response.setResult(true);
         return response;
     }
