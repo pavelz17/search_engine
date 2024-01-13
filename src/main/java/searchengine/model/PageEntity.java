@@ -9,7 +9,8 @@ import javax.persistence.*;
 @Getter
 @Setter
 @Entity
-public class Page {
+@Table(name = "page")
+public class PageEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,7 +18,7 @@ public class Page {
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "site_id", nullable = false)
-    private Site site;
+    private SiteEntity site;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String path;

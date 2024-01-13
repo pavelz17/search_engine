@@ -11,7 +11,8 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
-public class Site {
+@Table(name = "site")
+public class SiteEntity {
 
     @Transient
     private static final int PAGES_CAPACITY = 100;
@@ -37,13 +38,13 @@ public class Site {
     private String name;
 
     @OneToMany(mappedBy = "site")
-    private final List<Page> pages = new ArrayList<>();
+    private final List<PageEntity> pages = new ArrayList<>();
 
-    public List<Page> getPages() {
+    public List<PageEntity> getPages() {
         return new ArrayList<>(pages);
     }
 
-    public void addPage(Page page) {
+    public void addPage(PageEntity page) {
         pages.add(page);
         page.setSite(this);
     }
