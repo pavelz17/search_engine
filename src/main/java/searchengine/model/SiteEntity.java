@@ -8,9 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
+@Builder
+@ToString(exclude = "pages")
 @Table(name = "site")
 public class SiteEntity {
 
@@ -37,6 +40,7 @@ public class SiteEntity {
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String name;
 
+    @Builder.Default
     @OneToMany(mappedBy = "site")
     private final List<PageEntity> pages = new ArrayList<>();
 

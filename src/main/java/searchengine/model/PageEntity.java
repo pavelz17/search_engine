@@ -6,10 +6,12 @@ import javax.persistence.*;
 
 
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
-@Table(name = "page")
+@Builder
+@Table(name = "page", indexes = @Index(name = "path_index", columnList = "path"))
 public class PageEntity {
 
     @Id
@@ -20,7 +22,7 @@ public class PageEntity {
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "VARCHAR(50)", nullable = false)
     private String path;
 
     @Column(nullable = false)

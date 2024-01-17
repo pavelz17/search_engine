@@ -16,9 +16,12 @@ spring:
 
 indexing-settings:
   sites:
-    - url: https://www.lenta.ru
-      name: Лента.ру
-    - url: https://www.skillbox.ru
-      name: Skillbox
-    - url: https://www.playback.ru
+    - url: https://www.playback.ru/
       name: PlayBack.Ru
+    - url: https://www.svetlovka.ru/
+      name: Svetlovka.Ru
+
+jsoup-connect:
+  user-agent: HeliontSearchBot
+  referrer: https://ya.ru
+
