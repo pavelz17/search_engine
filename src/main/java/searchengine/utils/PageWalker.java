@@ -6,6 +6,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.dao.DataAccessException;
 import searchengine.config.JsoupConnection;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
@@ -25,9 +26,9 @@ import java.util.regex.Pattern;
 
 
 public class PageWalker extends RecursiveAction {
-    private static final int MAX_PATH_LENGTH = 50;
     private static final String INTERRUPT_INDEXING_ERROR_MESSAGE = "Индексация остановлена пользователем";
     private static final String CONNECT_ERROR_MESSAGE = "Не удалось подключиться к странице";
+    private static final String DATA_ACCESS_ERROR_MESSAGE = "Не удалось выполнить SQL запрос";
     private final SiteEntity siteEntity;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
@@ -55,13 +56,13 @@ public class PageWalker extends RecursiveAction {
             Integer statusCode = response.statusCode();
             String html = document.html();
             String path = getPath();
-
-            savePageToDatabase(statusCode, path, html);
-            Set<String> innerLinks = getInnerLinks(document);
-            if(!innerLinks.isEmpty()) {
-                invokeAll(createSubTasks(innerLinks));
+            if (!isPathExistInDatabase(path)) {
+                savePageToDatabase(statusCode, path, html);
+                Set<String> innerLinks = getInnerLinks(document);
+                if(!innerLinks.isEmpty()) {
+                    invokeAll(createSubTasks(innerLinks));
+                }
             }
-
         } catch (IOException e) {
             siteEntity.setLastError(CONNECT_ERROR_MESSAGE + e.getMessage());
             siteRepository.updateLastError(siteEntity.getLastError(), siteEntity.getId());
@@ -69,6 +70,9 @@ public class PageWalker extends RecursiveAction {
             siteEntity.setLastError(INTERRUPT_INDEXING_ERROR_MESSAGE);
             siteRepository.updateLastError(siteEntity.getLastError(), siteEntity.getId());
             throw new RuntimeException();
+        } catch (DataAccessException e) {
+            siteEntity.setLastError(DATA_ACCESS_ERROR_MESSAGE);
+            siteRepository.updateLastError(siteEntity.getLastError(), siteEntity.getId());
         }
     }
 
@@ -81,6 +85,13 @@ public class PageWalker extends RecursiveAction {
 
     private String getPath() {
         return url.replace(siteEntity.getUrl(), "/");
+    }
+
+    private boolean isPathExistInDatabase(String path) {
+        if (path.equals("/")) {
+            return false;
+        }
+        return pageRepository.existByPath(path).isPresent();
     }
 
     private void savePageToDatabase(Integer statusCode, String path, String html) {
@@ -108,9 +119,6 @@ public class PageWalker extends RecursiveAction {
     }
 
     private boolean isValid(String link) {
-        if (link.length() > url.length() + MAX_PATH_LENGTH) {
-            return false;
-        }
         Pattern pattern = Pattern.compile("^"+url+"[^#]+");
         Matcher matcher = pattern.matcher(link);
         return matcher.find();
