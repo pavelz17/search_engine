@@ -18,7 +18,7 @@ import java.util.List;
 public class SiteEntity {
 
     @Transient
-    private static final int PAGES_CAPACITY = 100;
+    private static final int PAGES_CAPACITY = 200;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

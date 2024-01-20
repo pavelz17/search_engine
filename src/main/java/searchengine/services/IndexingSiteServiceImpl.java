@@ -7,7 +7,6 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.BaseResponse;
 import searchengine.exceptions.IncorrectMethodCallException;
-import searchengine.model.PageEntity;
 import searchengine.model.SearchStatus;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
@@ -29,20 +28,22 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private ForkJoinPool forkJoinPool;
+    private ExecutorService executorService;
     private boolean indexingRun = false;
+    private Thread checkIndexingRun;
 
     @Override
     public BaseResponse startIndexing() {
         if (isIndexingRun()) {
             throw new IncorrectMethodCallException(START_INDEXING_ERROR_MESSAGE);
         }
+        initThreads();
         indexingRun = true;
-        forkJoinPool = new ForkJoinPool();
+        checkIndexingRun.start();
         for (Site site : sites.getSites()) {
             deleteSiteDataFromDatabase(site);
             SiteEntity siteEntity = saveSiteEntityToDatabase(site);
-            PageWalker walker = new PageWalker(siteEntity, siteRepository, pageRepository, jsoupConnection, siteEntity.getUrl());
-            submitTask(forkJoinPool, walker, siteEntity);
+            walk(siteEntity);
         }
         BaseResponse response = new BaseResponse();
         response.setResult(true);
@@ -54,7 +55,6 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         if (!isIndexingRun()) {
             throw new IncorrectMethodCallException(STOP_INDEXING_ERROR_MESSAGE);
         }
-        indexingRun = false;
         forkJoinPool.shutdownNow();
         BaseResponse response = new BaseResponse();
         response.setResult(true);
@@ -63,6 +63,24 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
 
     private boolean isIndexingRun() {
         return indexingRun;
+    }
+
+    private void initThreads() {
+        forkJoinPool = new ForkJoinPool();
+        executorService = Executors.newFixedThreadPool(sites.getSites().size());
+        checkIndexingRun = new Thread(() -> {
+            long start = System.currentTimeMillis();
+            while (true) {
+                if(executorService.isTerminated() || forkJoinPool.isShutdown()) {
+                    indexingRun = false;
+                    break;
+                }
+            }
+            long end = (System.currentTimeMillis() - start)/100;
+            long min = end / 60;
+            long sec = end % 60;
+            System.out.printf("%d min %d sec", min, sec);
+        });
     }
 
     private void deleteSiteDataFromDatabase(Site site) {
@@ -81,19 +99,17 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         return siteRepository.save(siteEntity);
     }
 
-    private void submitTask(ForkJoinPool forkJoinPool, PageWalker walker, SiteEntity siteEntity) {
-        ExecutorService executorService = Executors.newFixedThreadPool(sites.getSites().size());
+    private void walk(SiteEntity siteEntity) {
+        PageWalker walker = new PageWalker(siteEntity, siteRepository, jsoupConnection, siteEntity.getUrl());
         executorService.execute(() -> {
             try {
                 forkJoinPool.invoke(walker);
                 siteRepository.updateSearchStatus(SearchStatus.INDEXED.name(), siteEntity.getId());
+                pageRepository.saveAll(siteEntity.getPages());
             } catch (RuntimeException e) {
                 siteRepository.updateSearchStatus(SearchStatus.FAILED.name(), siteEntity.getId());
+                pageRepository.saveAll(siteEntity.getPages());
             } finally {
-                indexingRun = false;
-                for (PageEntity page : siteEntity.getPages()) {
-                    System.out.println(page.getPath());
-                }
                 executorService.shutdown();
             }
         });

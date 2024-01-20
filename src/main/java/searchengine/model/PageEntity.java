@@ -22,7 +22,7 @@ public class PageEntity {
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
 
-    @Column(columnDefinition = "VARCHAR(50)", nullable = false)
+    @Column(columnDefinition = "VARCHAR(55)", nullable = false)
     private String path;
 
     @Column(nullable = false)
