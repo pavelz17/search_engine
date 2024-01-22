@@ -7,6 +7,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.BaseResponse;
 import searchengine.exceptions.IncorrectMethodCallException;
+import searchengine.model.IndexingStatus;
 import searchengine.model.SearchStatus;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepository;
@@ -29,17 +30,18 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
     private final PageRepository pageRepository;
     private ForkJoinPool forkJoinPool;
     private ExecutorService executorService;
-    private boolean indexingRun = false;
-    private Thread checkIndexingRun;
+    private IndexingStatus indexingStatus = IndexingStatus.STOPPED;
+    private Thread checkIndexingStatus;
+
 
     @Override
     public BaseResponse startIndexing() {
-        if (isIndexingRun()) {
+        if (indexingStatus.equals(IndexingStatus.RUNNING)) {
             throw new IncorrectMethodCallException(START_INDEXING_ERROR_MESSAGE);
         }
         initThreads();
-        indexingRun = true;
-        checkIndexingRun.start();
+        indexingStatus = IndexingStatus.RUNNING;
+        checkIndexingStatus.start();
         for (Site site : sites.getSites()) {
             deleteSiteDataFromDatabase(site);
             SiteEntity siteEntity = saveSiteEntityToDatabase(site);
@@ -52,7 +54,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
 
     @Override
     public BaseResponse stopIndexing() {
-        if (!isIndexingRun()) {
+        if (indexingStatus.equals(IndexingStatus.STOPPED)) {
             throw new IncorrectMethodCallException(STOP_INDEXING_ERROR_MESSAGE);
         }
         forkJoinPool.shutdownNow();
@@ -61,25 +63,21 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         return response;
     }
 
-    private boolean isIndexingRun() {
-        return indexingRun;
-    }
-
     private void initThreads() {
         forkJoinPool = new ForkJoinPool();
         executorService = Executors.newFixedThreadPool(sites.getSites().size());
-        checkIndexingRun = new Thread(() -> {
+        checkIndexingStatus = new Thread(() -> {
             long start = System.currentTimeMillis();
             while (true) {
                 if(executorService.isTerminated() || forkJoinPool.isShutdown()) {
-                    indexingRun = false;
+                    indexingStatus = IndexingStatus.STOPPED;
                     break;
                 }
             }
-            long end = (System.currentTimeMillis() - start)/100;
+            long end = (System.currentTimeMillis() - start) / 1000;
             long min = end / 60;
             long sec = end % 60;
-            System.out.printf("%d min %d sec", min, sec);
+            System.out.printf("%d min %d sec\n", min, sec);
         });
     }
 

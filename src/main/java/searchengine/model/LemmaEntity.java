@@ -3,8 +3,6 @@ package searchengine.model;
 import lombok.*;
 
 import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,9 +10,8 @@ import java.util.List;
 @Setter
 @Builder
 @Entity
-@Table(name = "page", indexes = @Index(name = "path_index", columnList = "path"))
-public class PageEntity {
-
+@Table(name = "lemma")
+public class LemmaEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -23,13 +20,9 @@ public class PageEntity {
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
 
-    @Column(columnDefinition = "VARCHAR(55)", nullable = false)
-    private String path;
+    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
+    private String lemma;
 
     @Column(nullable = false)
-    private Integer code;
-
-    @Column(columnDefinition = "MEDIUMTEXT", nullable = false)
-    private String content;
+    private int frequency;
 }
-

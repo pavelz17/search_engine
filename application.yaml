@@ -18,8 +18,8 @@ indexing-settings:
   sites:
     - url: https://www.playback.ru/
       name: PlayBack.Ru
-    - url: https://www.svetlovka.ru/
-      name: Svetlovka.Ru
+#    - url: https://www.svetlovka.ru/
+#      name: Svetlovka.Ru
 
 jsoup-connect:
   user-agent: HeliontSearchBot

@@ -11,8 +11,8 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
-@Entity
 @Builder
+@Entity
 @ToString(exclude = "pages")
 @Table(name = "site")
 public class SiteEntity {
@@ -44,8 +44,16 @@ public class SiteEntity {
     @OneToMany(mappedBy = "site")
     private final List<PageEntity> pages = new ArrayList<>();
 
+    @Builder.Default
+    @OneToMany(mappedBy = "site")
+    private final List<LemmaEntity> lemmas = new ArrayList<>();
+
     public List<PageEntity> getPages() {
         return new ArrayList<>(pages);
+    }
+
+    public List<LemmaEntity> getLemmas() {
+        return new ArrayList<>(lemmas);
     }
 
     public void addPage(PageEntity page) {
@@ -53,4 +61,8 @@ public class SiteEntity {
         page.setSite(this);
     }
 
+    public void addLemma(LemmaEntity lemma) {
+        lemmas.add(lemma);
+        lemma.setSite(this);
+    }
 }
