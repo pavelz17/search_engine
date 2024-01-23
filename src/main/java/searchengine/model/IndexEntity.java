@@ -25,5 +25,5 @@ public class IndexEntity {
     private PageEntity page;
 
     @Column(precision = 5, scale = 2, nullable = false)
-    private Float kef;
+    private Float rate;
 }
