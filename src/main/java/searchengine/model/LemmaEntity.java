@@ -12,6 +12,7 @@ import javax.persistence.*;
 @Entity
 @Table(name = "lemma")
 public class LemmaEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;

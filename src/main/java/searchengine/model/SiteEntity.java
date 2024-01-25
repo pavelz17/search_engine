@@ -13,12 +13,15 @@ import java.util.List;
 @Setter
 @Builder
 @Entity
-@ToString(exclude = "pages")
+@ToString(exclude = {"pages", "lemmas"})
 @Table(name = "site")
 public class SiteEntity {
 
     @Transient
     private static final int PAGES_CAPACITY = 200;
+
+    @Transient
+    private static final int LEMMAS_CAPACITY = 500;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,18 +45,27 @@ public class SiteEntity {
 
     @Builder.Default
     @OneToMany(mappedBy = "site")
-    private final List<PageEntity> pages = new ArrayList<>();
+    private final List<PageEntity> pages = new ArrayList<>(PAGES_CAPACITY);
 
     @Builder.Default
     @OneToMany(mappedBy = "site")
-    private final List<LemmaEntity> lemmas = new ArrayList<>();
+    private final List<LemmaEntity> lemmas = new ArrayList<>(PAGES_CAPACITY);
+
+    public void addLemma(LemmaEntity lemma) {
+        lemmas.add(lemma);
+        lemma.setSite(this);
+    }
 
     public List<PageEntity> getPages() {
         return new ArrayList<>(pages);
     }
 
-    public List<LemmaEntity> getLemmas() {
-        return new ArrayList<>(lemmas);
+    public List<PageEntity> getPages(int startIndex, int endIndex) {
+        return new ArrayList<>(pages.subList(startIndex, endIndex));
+    }
+
+    public int getPagesSize() {
+        return pages.size();
     }
 
     public void addPage(PageEntity page) {
@@ -61,8 +73,7 @@ public class SiteEntity {
         page.setSite(this);
     }
 
-    public void addLemma(LemmaEntity lemma) {
-        lemmas.add(lemma);
-        lemma.setSite(this);
+    public List<LemmaEntity> getLemmas() {
+        return new ArrayList<>(lemmas);
     }
 }

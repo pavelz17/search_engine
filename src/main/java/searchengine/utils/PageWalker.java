@@ -1,6 +1,6 @@
 package searchengine.utils;
 
-
+import lombok.Getter;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -19,9 +19,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-
+@Getter
 public class PageWalker extends RecursiveAction {
     private static final int MAX_PATH_LENGTH = 50;
     private static final String INTERRUPT_INDEXING_ERROR_MESSAGE = "Индексация остановлена пользователем";
@@ -29,6 +30,7 @@ public class PageWalker extends RecursiveAction {
     private final SiteEntity siteEntity;
     private final SiteRepository siteRepository;
     private final JsoupConnection jsoupConnection;
+    private final AtomicBoolean running = new AtomicBoolean(false);
     private final String url;
 
     public PageWalker(SiteEntity siteEntity,
@@ -55,6 +57,7 @@ public class PageWalker extends RecursiveAction {
             if(!innerLinks.isEmpty()) {
                 invokeAll(createSubTasks(innerLinks));
             }
+
         } catch (IOException e) {
             siteEntity.setLastError(CONNECT_ERROR_MESSAGE + url);
             siteRepository.updateLastError(siteEntity.getLastError(), siteEntity.getId());
@@ -112,5 +115,13 @@ public class PageWalker extends RecursiveAction {
             subTasks.add(new PageWalker(siteEntity, siteRepository, jsoupConnection, link));
         }
         return subTasks;
+    }
+
+    public boolean getRunning() {
+        return running.get();
+    }
+
+    public void setRunning(boolean running) {
+        this.running.set(running);
     }
 }
