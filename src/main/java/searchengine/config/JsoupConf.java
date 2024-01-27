@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Setter
 @Component
 @ConfigurationProperties(prefix = "jsoup-connect")
-public class JsoupConnection {
+public class JsoupConf {
     private String userAgent;
     private String referrer;
 }

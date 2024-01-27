@@ -1,5 +1,6 @@
 package searchengine.utils;
 
+import lombok.experimental.UtilityClass;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 
@@ -12,6 +13,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@UtilityClass
 public class TextHandler {
     private static final String FILTER_PARTS_OF_SPEECH = "МЕЖД|СОЮЗ|ПРЕДЛ";
     private static final String REGEX_FOR_HTML_TAGS = "</?[a-z]+\\s*[\\w\\s='\"]*/?>";

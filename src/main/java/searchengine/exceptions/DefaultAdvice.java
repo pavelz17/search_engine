@@ -14,4 +14,11 @@ public class DefaultAdvice {
         response.setResult(false);
         return new ResponseEntity<>(response, HttpStatus.METHOD_NOT_ALLOWED);
     }
+
+    @ExceptionHandler(SiteOutOfBoundConfigFile.class)
+    public ResponseEntity<ErrorResponse> handleSiteOutOfBoundConfigFileException(SiteOutOfBoundConfigFile e) {
+        ErrorResponse response = new ErrorResponse(e.getMessage());
+        response.setResult(false);
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
 }

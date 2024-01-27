@@ -2,14 +2,12 @@ package searchengine.utils;
 
 import lombok.Getter;
 import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import searchengine.config.JsoupConnection;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.repositories.SiteRepository;
+import searchengine.services.SiteService;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -23,36 +21,39 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 @Getter
-public class PageWalker extends RecursiveAction {
+public class SiteWalker extends RecursiveAction {
     private static final int MAX_PATH_LENGTH = 50;
     private static final String INTERRUPT_INDEXING_ERROR_MESSAGE = "Индексация остановлена пользователем";
     private static final String CONNECT_ERROR_MESSAGE = "Не удалось подключиться к странице: ";
     private final SiteEntity siteEntity;
-    private final SiteRepository siteRepository;
-    private final JsoupConnection jsoupConnection;
+    private final SiteService siteService;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final String url;
 
-    public PageWalker(SiteEntity siteEntity,
-                      SiteRepository siteRepository,
-                      JsoupConnection jsoupConnection,
+    public SiteWalker(SiteEntity siteEntity,
+                      SiteService siteService,
                       String url) {
         this.siteEntity = siteEntity;
-        this.siteRepository = siteRepository;
-        this.jsoupConnection = jsoupConnection;
+        this.siteService = siteService;
         this.url = url;
     }
 
     @Override
     protected void compute() {
+        System.out.println(url);
         try {
-            siteRepository.updateStatusTime(LocalDateTime.now(), siteEntity.getId());
-            Connection.Response response = getResponse(url);
+            siteService.updateStatusTime(LocalDateTime.now(), siteEntity.getId());
+            Connection.Response response = siteService.getResponse(url);
             Document document = response.parse();
             Integer statusCode = response.statusCode();
             String html = document.html();
-            String path = getPath(url);
-            savePageToSiteEntity(statusCode, path, html);
+            String path = url.replace(siteEntity.getUrl(), "/");
+            PageEntity pageEntity = PageEntity.builder()
+                    .code(statusCode)
+                    .path(path)
+                    .content(html)
+                    .build();
+            siteEntity.addPage(pageEntity);
             Set<String> innerLinks = getInnerLinks(document);
             if(!innerLinks.isEmpty()) {
                 invokeAll(createSubTasks(innerLinks));
@@ -60,42 +61,22 @@ public class PageWalker extends RecursiveAction {
 
         } catch (IOException e) {
             siteEntity.setLastError(CONNECT_ERROR_MESSAGE + url);
-            siteRepository.updateLastError(siteEntity.getLastError(), siteEntity.getId());
+            siteService.updateLastError(siteEntity.getLastError(), siteEntity.getId());
         } catch (InterruptedException | CancellationException e) {
             siteEntity.setLastError(INTERRUPT_INDEXING_ERROR_MESSAGE);
-            siteRepository.updateLastError(siteEntity.getLastError(), siteEntity.getId());
+            siteService.updateLastError(siteEntity.getLastError(), siteEntity.getId());
             throw new RuntimeException();
         }
     }
 
-    private Connection.Response getResponse(String url) throws IOException {
-        return Jsoup.connect(url)
-                .userAgent(jsoupConnection.getUserAgent())
-                .referrer(jsoupConnection.getReferrer())
-                .execute();
-    }
-
-    private String getPath(String url) {
-        return url.replace(siteEntity.getUrl(), "/");
-    }
-
-    private void savePageToSiteEntity(Integer statusCode, String path, String html) {
-        PageEntity pageEntity = PageEntity.builder()
-                .code(statusCode)
-                .path(path)
-                .content(html)
-                .build();
-        siteEntity.addPage(pageEntity);
-    }
-
     private Set<String> getInnerLinks(Document document) throws InterruptedException {
         Set<String> innerLinks = new HashSet<>();
-        Elements links = (siteEntity.getUrl().equals(url)) ? document.select("a[href]")
-                                                           : document.body().select("a[href]");
+        Elements links = document.body().select("a[href^=/]");
         for(Element link : links) {
             Thread.sleep((long) (50 + (Math.random() * 450)));
             String absLink = link.attr("abs:href");
             if(checkLink(absLink)) {
+                System.out.println(absLink);
                 innerLinks.add(absLink);
             }
         }
@@ -103,16 +84,16 @@ public class PageWalker extends RecursiveAction {
     }
 
     private boolean checkLink(String link) {
-        if (getPath(link).length() > MAX_PATH_LENGTH) {
+        if (link.replace(siteEntity.getUrl(), "/").length() > MAX_PATH_LENGTH) {
             return false;
         }
-        return Pattern.matches("^"+url+".+((?<!#|\\.\\w{3,5})|(?<=\\.html))$", link);
+        return Pattern.matches("^"+url+"[^#]+((?<!\\.\\w{3,5})|(?<=\\.html))$", link);
     }
 
-    private List<PageWalker> createSubTasks(Set<String> innerLinks) {
-        List<PageWalker> subTasks = new ArrayList<>();
+    private List<SiteWalker> createSubTasks(Set<String> innerLinks) {
+        List<SiteWalker> subTasks = new ArrayList<>();
         for (String link : innerLinks) {
-            subTasks.add(new PageWalker(siteEntity, siteRepository, jsoupConnection, link));
+            subTasks.add(new SiteWalker(siteEntity, siteService, link));
         }
         return subTasks;
     }

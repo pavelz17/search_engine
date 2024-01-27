@@ -8,6 +8,7 @@ import searchengine.model.SiteEntity;
 
 import javax.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Repository
 public interface SiteRepository extends CrudRepository<SiteEntity, Integer> {
@@ -32,4 +33,7 @@ public interface SiteRepository extends CrudRepository<SiteEntity, Integer> {
     @Transactional
     @Query(value = "UPDATE site s SET s.last_error = :error WHERE s.id = :id ", nativeQuery = true)
     void updateLastError(String error, Integer id);
+
+    @Query(value = "SELECT * FROM site s WHERE s.url = :url", nativeQuery = true)
+    Optional<SiteEntity> findByUrl(String url);
 }

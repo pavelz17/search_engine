@@ -13,7 +13,7 @@ import java.util.List;
 @Setter
 @Builder
 @Entity
-@ToString(exclude = {"pages", "lemmas"})
+@ToString(exclude = "pages")
 @Table(name = "site")
 public class SiteEntity {
 
@@ -51,11 +51,6 @@ public class SiteEntity {
     @OneToMany(mappedBy = "site")
     private final List<LemmaEntity> lemmas = new ArrayList<>(PAGES_CAPACITY);
 
-    public void addLemma(LemmaEntity lemma) {
-        lemmas.add(lemma);
-        lemma.setSite(this);
-    }
-
     public List<PageEntity> getPages() {
         return new ArrayList<>(pages);
     }
@@ -68,12 +63,17 @@ public class SiteEntity {
         return pages.size();
     }
 
-    public void addPage(PageEntity page) {
-        pages.add(page);
-        page.setSite(this);
+    public void addPage(PageEntity pageEntity) {
+        pages.add(pageEntity);
+        pageEntity.setSite(this);
     }
 
     public List<LemmaEntity> getLemmas() {
         return new ArrayList<>(lemmas);
+    }
+
+    public void addLemma(LemmaEntity lemmaEntity) {
+        lemmas.add(lemmaEntity);
+        lemmaEntity.setSite(this);
     }
 }
