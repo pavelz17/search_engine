@@ -5,33 +5,43 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
 import searchengine.config.JsoupConf;
+import searchengine.config.Site;
+import searchengine.config.SitesList;
 import searchengine.model.*;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
-import searchengine.utils.SiteWalker;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class SiteServiceImpl implements SiteService {
-    private static final int BATCH_SIZE_FOR_SAVE_PAGE = 15;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
     private final JsoupConf jsoupConf;
+    private final SitesList sitesFromConfigFile;
+
+    @Override
+    public List<Site> getSitesFromConfig() {
+        return sitesFromConfigFile.getSites();
+    }
+
+    @Override
+    public void updateSitesFromConfigFile() {
+        for (Site site : sitesFromConfigFile.getSites()) {
+            if (this.findSiteByUrl(site.getUrl()).isEmpty()) {
+                this.saveSite(site.getUrl(), site.getName());
+            }
+        }
+    }
 
     @Override
     public SiteEntity saveSite(String url, String name) {
@@ -47,40 +57,38 @@ public class SiteServiceImpl implements SiteService {
     }
 
     @Override
-    public PageEntity savePage(SiteEntity site, String url, Connection.Response response) throws IOException {
-        PageEntity pageEntity = PageEntity.builder()
-                .code(response.statusCode())
-                .content(response.parse().html())
-                .path(url.replace(site.getUrl(), "/"))
-                .build();
-        site.addPage(pageEntity);
-        return pageRepository.save(pageEntity);
+    public PageEntity savePage(PageEntity page) {
+        return pageRepository.save(page);
     }
 
-    @Override
-    public void saveLemmas(SiteEntity site, Map<String, Integer> lemmasQuantity) {
-        for (Map.Entry<String, Integer> entry : lemmasQuantity.entrySet()) {
-            LemmaEntity lemma = LemmaEntity.builder()
-                    .lemma(entry.getKey())
-                    .repeatCount(Float.valueOf(entry.getValue()))
-                    .site(site)
-                    .build();
-            site.addLemma(lemma);
-        }
-        lemmaRepository.saveAll(site.getLemmas());
-    }
 
     @Override
-    public void saveIndexes(SiteEntity site, PageEntity page) {
-        List<IndexEntity> indexes = new ArrayList<>();
-        for (LemmaEntity lemma : site.getLemmas()) {
+    public void saveLemmasAndIndexes(HashMap<String, Integer> lemmas, SiteEntity site, PageEntity page) {
+        Set<Integer> updateLemmasIds = new HashSet<>();
+        for (Map.Entry<String, Integer> entry : lemmas.entrySet()) {
+        LemmaEntity lemmaEntity;
+        String lemma = entry.getKey();
+            Optional<LemmaEntity> maybeLemma = lemmaRepository.findByUniqueKey(lemma, site.getId());
+            if (maybeLemma.isPresent()) {
+                lemmaEntity = maybeLemma.get();
+                updateLemmasIds.add(lemmaEntity.getId());
+            } else {
+                lemmaEntity = LemmaEntity.builder()
+                        .lemma(entry.getKey())
+                        .site(site)
+                        .frequency(1)
+                        .build();
+                lemmaRepository.save(lemmaEntity);
+            }
+
             IndexEntity index = IndexEntity.builder()
+                    .lemma(lemmaEntity)
                     .page(page)
-                    .lemma(lemma)
-                    .rate(lemma.getRepeatCount())
+                    .rate(Float.valueOf(entry.getValue()))
                     .build();
+            indexRepository.save(index);
         }
-        indexRepository.saveAll(indexes);
+        lemmaRepository.updateFrequencyAfterSave(updateLemmasIds);
     }
 
     @Override
@@ -90,78 +98,33 @@ public class SiteServiceImpl implements SiteService {
 
     @Override
     public void deletePageById(Integer id) {
-        List<IndexEntity> indexes = indexRepository.findAllByPageId(id);
-        List<LemmaEntity> deleteLemmas = new ArrayList<>();
-        List<LemmaEntity> updateLemmas = new ArrayList<>();
-        for (IndexEntity index : indexes) {
-            LemmaEntity lemma = index.getLemma();
-            int frequency = lemma.getFrequency();
-            if (frequency > 1) {
-                updateLemmas.add(lemma);
-            } else {
-                deleteLemmas.add(lemma);
-            }
-        }
-        if (!deleteLemmas.isEmpty()) {
-            lemmaRepository.deleteAllLemmasByIds(deleteLemmas);
-        }
-        if (!updateLemmas.isEmpty()) {
-            lemmaRepository.updateFrequencyAllLemmasByIds(updateLemmas);
-        }
-
+        deleteOrUpdateLemmasByPageId(id);
         pageRepository.deleteById(id);
     }
 
     @Override
+    public Iterable<SiteEntity> findAllSites() {
+        return siteRepository.findAll();
+    }
+
+    @Override
     public Optional<SiteEntity> findSiteByUrl(String url) {
-        Pattern pattern = Pattern.compile("^https?://\\w+.(ru|com|org)/");
+        Pattern pattern = Pattern.compile("^https?://.+\\.(ru|com|org)/");
         Matcher matcher = pattern.matcher(url);
         String rootUrl = "";
 
-        while (matcher.find()) {
+        if (matcher.find()) {
             rootUrl = matcher.group();
         }
         return siteRepository.findByUrl(rootUrl);
     }
 
     @Override
-    public Optional<PageEntity> findPageByPath(String path) {
+    public Optional<PageEntity> findPageByUrl(SiteEntity site, String url) {
+        String path = url.replace(site.getUrl(), "/");
         return pageRepository.findByPath(path);
     }
 
-    @Override
-    public void walkAndSavePages(SiteEntity site, ExecutorService executorService, ForkJoinPool forkJoinPool) {
-        SiteWalker siteWalker = new SiteWalker(site, this, site.getUrl());
-        executorService.execute(() -> {
-            try {
-                siteWalker.setRunning(true);
-                forkJoinPool.invoke(siteWalker);
-                siteRepository.updateSearchStatus(SearchStatus.INDEXED.name(), site.getId());
-                pageRepository.saveAll(site.getPages());
-            } catch (RuntimeException e) {
-                siteRepository.updateSearchStatus(SearchStatus.FAILED.name(), site.getId());
-                pageRepository.saveAll(site.getPages());
-            } finally {
-                siteWalker.setRunning(false);
-                executorService.shutdown();
-            }
-        });
-
-        new Thread(() -> {
-            int index = 0;
-            while (siteWalker.getRunning()) {
-                if(site.getPagesSize() >= index + BATCH_SIZE_FOR_SAVE_PAGE) {
-                    pageRepository.saveAll(site.getPages(index, index + BATCH_SIZE_FOR_SAVE_PAGE));
-                    index += BATCH_SIZE_FOR_SAVE_PAGE;
-                }
-            }
-
-            int pagesSize = site.getPagesSize();
-            if (pagesSize > index) {
-                pageRepository.saveAll(site.getPages(index, pagesSize));
-            }
-        }).start();
-    }
 
     @Override
     public void updateStatusTime(LocalDateTime localDateTime, Integer id) {
@@ -174,9 +137,63 @@ public class SiteServiceImpl implements SiteService {
     }
 
     @Override
+    public void updateSearchStatus(String status, Integer id) {
+        siteRepository.updateSearchStatus(status, id);
+    }
+
+
+    @Override
     public Connection.Response getResponse(String url) throws IOException {
         return Jsoup.connect(url).userAgent(jsoupConf.getUserAgent())
                 .referrer(jsoupConf.getReferrer())
                 .execute();
+    }
+
+    @Override
+    public void saveAllPages(List<PageEntity> pages) {
+        pageRepository.saveAll(pages);
+    }
+
+    @Override
+    public int getTotalPagesCount() {
+        return (int) pageRepository.count();
+    }
+
+    @Override
+    public int getTotalLemmasCount() {
+        return (int) lemmaRepository.count();
+    }
+
+    @Override
+    public int getPagesCountBySiteId(Integer id) {
+        List<PageEntity> pages = pageRepository.findAllBySiteId(id);
+        return pages.size();
+    }
+
+    @Override
+    public int getLemmasCountBySiteId(Integer id) {
+        List<LemmaEntity> lemmas = lemmaRepository.findAllBySiteId(id);
+        return lemmas.size();
+    }
+
+    private void deleteOrUpdateLemmasByPageId(Integer id) {
+        List<IndexEntity> indexes = indexRepository.findAllByPageId(id);
+        List<LemmaEntity> deleteLemmas = new ArrayList<>();
+        List<Integer> updateLemmasIds = new ArrayList<>();
+        for (IndexEntity index : indexes) {
+            LemmaEntity lemma = index.getLemma();
+            int frequency = lemma.getFrequency();
+            if (frequency > 1) {
+                updateLemmasIds.add(lemma.getId());
+            } else {
+                deleteLemmas.add(lemma);
+            }
+        }
+        if (!deleteLemmas.isEmpty()) {
+            lemmaRepository.deleteAll(deleteLemmas);
+        }
+        if (!updateLemmasIds.isEmpty()) {
+            lemmaRepository.updateFrequencyAfterDelete(updateLemmasIds);
+        }
     }
 }

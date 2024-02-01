@@ -18,10 +18,10 @@ import java.util.List;
 public class SiteEntity {
 
     @Transient
-    private static final int PAGES_CAPACITY = 200;
+    private static final int PAGES_INIT_CAPACITY = 200;
 
     @Transient
-    private static final int LEMMAS_CAPACITY = 500;
+    private static final int LEMMA_SET_INIT_CAPACITY = 1000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,11 +45,11 @@ public class SiteEntity {
 
     @Builder.Default
     @OneToMany(mappedBy = "site")
-    private final List<PageEntity> pages = new ArrayList<>(PAGES_CAPACITY);
+    private final List<PageEntity> pages = new ArrayList<>(PAGES_INIT_CAPACITY);
 
     @Builder.Default
     @OneToMany(mappedBy = "site")
-    private final List<LemmaEntity> lemmas = new ArrayList<>(PAGES_CAPACITY);
+    private final List<LemmaEntity> lemmas = new ArrayList<>(LEMMA_SET_INIT_CAPACITY);
 
     public List<PageEntity> getPages() {
         return new ArrayList<>(pages);
@@ -72,8 +72,14 @@ public class SiteEntity {
         return new ArrayList<>(lemmas);
     }
 
-    public void addLemma(LemmaEntity lemmaEntity) {
-        lemmas.add(lemmaEntity);
-        lemmaEntity.setSite(this);
+    public void addLemmas(List<LemmaEntity> lemmas) {
+        this.lemmas.addAll(lemmas);
+        for (LemmaEntity lemma : lemmas) {
+            lemma.setSite(this);
+        }
+    }
+
+    public void clearLemmas() {
+        lemmas.clear();
     }
 }

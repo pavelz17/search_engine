@@ -3,15 +3,17 @@ package searchengine.model;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = "site")
 @Builder
 @Entity
-@Table(name = "lemma")
+@Table(name = "lemma", indexes = @Index(name = "unique_lemma", columnList = "lemma, site_id", unique = true))
 public class LemmaEntity {
 
     @Id
@@ -25,10 +27,7 @@ public class LemmaEntity {
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String lemma;
 
-    @Column(nullable = false)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @Column(columnDefinition = "integer  default 1", nullable = false)
     private Integer frequency;
-
-    @Transient
-    private Float repeatCount;
 }
+

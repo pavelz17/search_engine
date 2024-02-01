@@ -21,17 +21,17 @@ public interface SiteRepository extends CrudRepository<SiteEntity, Integer> {
 
     @Modifying
     @Transactional
-    @Query(value = "UPDATE site s SET s.status_time = :statusTime WHERE s.id = :id ", nativeQuery = true)
+    @Query(value = "UPDATE site s SET s.status_time = :statusTime WHERE s.id = :id", nativeQuery = true)
     void updateStatusTime(LocalDateTime statusTime, Integer id);
 
     @Modifying
     @Transactional
-    @Query(value = "UPDATE site s SET s.status = :status WHERE s.id = :id ", nativeQuery = true)
+    @Query(value = "UPDATE site s SET s.status = :status WHERE s.id = :id", nativeQuery = true)
     void updateSearchStatus(String status, Integer id);
 
     @Modifying
     @Transactional
-    @Query(value = "UPDATE site s SET s.last_error = :error WHERE s.id = :id ", nativeQuery = true)
+    @Query(value = "UPDATE site s SET s.last_error = :error WHERE s.id = :id", nativeQuery = true)
     void updateLastError(String error, Integer id);
 
     @Query(value = "SELECT * FROM site s WHERE s.url = :url", nativeQuery = true)

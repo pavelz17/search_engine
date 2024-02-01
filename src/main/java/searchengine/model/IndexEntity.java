@@ -27,4 +27,13 @@ public class IndexEntity {
     @Column(precision = 5, scale = 2, nullable = false)
     private Float rate;
 
+//    public void setLemma(LemmaEntity lemma) {
+//        this.lemma = lemma;
+//        lemma.getIndexes().add(this);
+//    }
+//
+//    public void setPage(PageEntity page) {
+//        this.page = page;
+//        page.addIndex(this);
+//    }
 }
