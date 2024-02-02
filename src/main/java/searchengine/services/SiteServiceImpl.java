@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.JsoupConf;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -36,6 +35,7 @@ public class SiteServiceImpl implements SiteService {
     private final PageMapper pageMapper;
     private final LemmasMapper lemmasMapper;
 
+
     @Override
     public List<Site> getSitesFromConfig() {
         return sitesFromConfigFile.getSites();
@@ -43,6 +43,7 @@ public class SiteServiceImpl implements SiteService {
 
     @Override
     public void updateSitesInDatabaseFromConfigFile() {
+
         for (Site site : sitesFromConfigFile.getSites()) {
             if (this.findSiteByUrl(site.getUrl()).isEmpty()) {
                 this.saveSite(site.getUrl(), site.getName());

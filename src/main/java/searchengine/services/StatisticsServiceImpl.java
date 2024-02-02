@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import searchengine.dto.statistics.*;
 import searchengine.model.SiteEntity;
 
-import java.sql.Timestamp;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +46,6 @@ public class StatisticsServiceImpl implements StatisticsService {
         response.setResult(true);
         return response;
     }
-
 
     private DetailedStatisticsItem createDetailResponse(SiteEntity site) {
         DetailedStatisticsItem item = new DetailedStatisticsItem();

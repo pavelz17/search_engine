@@ -13,7 +13,6 @@ import java.util.Optional;
 @Repository
 public interface SiteRepository extends CrudRepository<SiteEntity, Integer> {
 
-
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM site s WHERE s.url LIKE :url%", nativeQuery = true)
