@@ -107,7 +107,7 @@ public class SiteServiceImpl implements SiteService {
     public void saveLemmas(List<LemmaEntity> lemmaEntities, SiteEntity site) {
         Set<Integer> lemmasIdForUpdate = new HashSet<>(LEMMAS_CAPACITY);
         Set<LemmaEntity> lemmasForSave = new HashSet<>(LEMMAS_CAPACITY);
-        
+
         for (int i = 0; i < lemmaEntities.size(); i++) {
             LemmaEntity lemmaEntity = lemmaEntities.get(i);
             Optional<LemmaEntity> maybeLemma = lemmaRepository.findByUniqueKey(lemmaEntity.getLemma(), site.getId());

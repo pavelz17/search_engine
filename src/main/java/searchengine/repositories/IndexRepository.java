@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface IndexRepository extends CrudRepository<IndexEntity, Integer> {
 
+
     @Transactional
     @Query(value = "SELECT * FROM page_index p WHERE p.page_id = :id", nativeQuery = true)
     List<IndexEntity> findAllByPageId(Integer id);

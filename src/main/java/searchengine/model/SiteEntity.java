@@ -5,9 +5,7 @@ import lombok.*;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -75,6 +73,7 @@ public class SiteEntity {
 
     public void clearPages() {
         pages.clear();
+
     }
 
     public void clearLemmas() {
