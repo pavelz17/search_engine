@@ -14,6 +14,8 @@ import java.util.List;
 @Entity
 @Table(name = "lemma", indexes = @Index(name = "unique_lemma", columnList = "lemma, site_id", unique = true))
 public class LemmaEntity {
+
+    @Transient
     private final static int INDEX_CAPACITY = 500;
 
     @Id

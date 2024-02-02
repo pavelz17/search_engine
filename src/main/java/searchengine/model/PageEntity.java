@@ -15,6 +15,8 @@ import java.util.List;
 @Entity
 @Table(name = "page", indexes = @Index(name = "path_index", columnList = "path"))
 public class PageEntity {
+
+    @Transient
     private final static int INDEX_CAPACITY = 500;
 
     @Id

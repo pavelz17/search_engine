@@ -10,8 +10,11 @@ import java.util.List;
 
 @Repository
 public interface IndexRepository extends CrudRepository<IndexEntity, Integer> {
+<<<<<<< HEAD
 
     @Transactional
+=======
+>>>>>>> 3dcef69a06a1b24917eef2146edf44e632b5fc10
     @Query(value = "SELECT * FROM page_index p WHERE p.page_id = :id", nativeQuery = true)
     List<IndexEntity> findAllByPageId(Integer id);
 }
