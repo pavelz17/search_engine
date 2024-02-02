@@ -3,6 +3,8 @@ package searchengine.model;
 import lombok.*;
 
 import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,6 +15,7 @@ import javax.persistence.*;
 @Entity
 @Table(name = "page", indexes = @Index(name = "path_index", columnList = "path"))
 public class PageEntity {
+    private final static int INDEX_CAPACITY = 500;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,5 +33,16 @@ public class PageEntity {
 
     @Column(columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
+
+    @OneToMany(mappedBy = "page")
+    private final List<IndexEntity> indexes = new ArrayList<>(INDEX_CAPACITY);
+
+    public List<IndexEntity> getIndexes() {
+        return new ArrayList<>(indexes);
+    }
+
+    public void addIndex(IndexEntity index) {
+        indexes.add(index);
+    }
 }
 

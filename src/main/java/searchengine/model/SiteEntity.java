@@ -21,7 +21,7 @@ public class SiteEntity {
     private static final int PAGES_INIT_CAPACITY = 200;
 
     @Transient
-    private static final int LEMMA_SET_INIT_CAPACITY = 1000;
+    private static final int LEMMA_SET_INIT_CAPACITY = 5000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -72,7 +72,7 @@ public class SiteEntity {
         return new ArrayList<>(lemmas);
     }
 
-    public void addLemmas(List<LemmaEntity> lemmas) {
+    public void addLemmaEntities(List<LemmaEntity> lemmas) {
         this.lemmas.addAll(lemmas);
         for (LemmaEntity lemma : lemmas) {
             lemma.setSite(this);

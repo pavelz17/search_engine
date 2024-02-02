@@ -5,13 +5,12 @@ import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import searchengine.model.PageEntity;
+import searchengine.dto.model.PageDto;
 import searchengine.model.SiteEntity;
 import searchengine.services.IndexingSiteService;
 import searchengine.services.SiteService;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -48,9 +47,8 @@ public class PageWalker extends RecursiveAction {
             Connection.Response response = siteService.getResponse(url);
             Document document = response.parse();
             int statusCode = response.statusCode();
-            String path = url.replace(site.getUrl(), "/");
-            PageEntity page = buildPage(statusCode, path, document.html(), site);
-            indexingSiteService.createIndex(site, page);
+            PageDto pageDto = new PageDto(statusCode, document.html());
+            indexingSiteService.createIndex(site, url, pageDto);
             Set<String> innerLinks = getInnerLinks(document);
             if(!innerLinks.isEmpty()) {
                 invokeAll(createSubTasks(innerLinks));
@@ -91,14 +89,6 @@ public class PageWalker extends RecursiveAction {
             subTasks.add(new PageWalker(link, site, siteService, indexingSiteService));
         }
         return subTasks;
-    }
-    private PageEntity buildPage(Integer statusCode, String path, String html, SiteEntity site) {
-        return PageEntity.builder()
-                .code(statusCode)
-                .path(path)
-                .content(html)
-                .site(site)
-                .build();
     }
 
     public boolean getRunning() {

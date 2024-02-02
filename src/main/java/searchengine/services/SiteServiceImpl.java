@@ -4,9 +4,14 @@ import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.JsoupConf;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
+import searchengine.dto.model.LemmasDto;
+import searchengine.dto.model.PageDto;
+import searchengine.mappers.LemmasMapper;
+import searchengine.mappers.PageMapper;
 import searchengine.model.*;
 import searchengine.repositories.IndexRepository;
 import searchengine.repositories.LemmaRepository;
@@ -28,6 +33,8 @@ public class SiteServiceImpl implements SiteService {
     private final IndexRepository indexRepository;
     private final JsoupConf jsoupConf;
     private final SitesList sitesFromConfigFile;
+    private final PageMapper pageMapper;
+    private final LemmasMapper lemmasMapper;
 
     @Override
     public List<Site> getSitesFromConfig() {
@@ -35,12 +42,43 @@ public class SiteServiceImpl implements SiteService {
     }
 
     @Override
-    public void updateSitesFromConfigFile() {
+    public void updateSitesInDatabaseFromConfigFile() {
         for (Site site : sitesFromConfigFile.getSites()) {
             if (this.findSiteByUrl(site.getUrl()).isEmpty()) {
                 this.saveSite(site.getUrl(), site.getName());
             }
         }
+    }
+
+    @Override
+    public PageEntity createPageEntity(PageDto pageDto, SiteEntity site, String url) {
+        PageEntity pageEntity = pageMapper.mapFrom(pageDto);
+        String path = url.replace(site.getUrl(), "/");
+        pageEntity.setPath(path);
+        pageEntity.setSite(site);
+        return pageEntity;
+    }
+
+    @Override
+    public List<LemmaEntity> createLemmaEntities(LemmasDto lemmasDto, SiteEntity site) {
+        List<LemmaEntity> lemmaEntities = lemmasMapper.mapFrom(lemmasDto);
+        site.addLemmaEntities(lemmaEntities);
+        return lemmaEntities;
+    }
+
+    @Override
+    public List<IndexEntity> createIndexes(PageEntity page, SiteEntity site, LemmasDto lemmasDto) {
+        List<IndexEntity> indexes = new ArrayList<>();
+        Map<String, Integer> lemmas = lemmasDto.lemmas();
+        for (LemmaEntity lemma : site.getLemmas()) {
+            IndexEntity indexEntity = IndexEntity.builder()
+                    .page(page)
+                    .lemma(lemma)
+                    .rate(Float.valueOf(lemmas.get(lemma.getLemma())))
+                    .build();
+            indexes.add(indexEntity);
+        }
+        return indexes;
     }
 
     @Override
@@ -61,34 +99,23 @@ public class SiteServiceImpl implements SiteService {
         return pageRepository.save(page);
     }
 
-
     @Override
-    public void saveLemmasAndIndexes(HashMap<String, Integer> lemmas, SiteEntity site, PageEntity page) {
+    public void saveLemmas(List<LemmaEntity> lemmaEntities, SiteEntity site) {
         Set<Integer> updateLemmasIds = new HashSet<>();
-        for (Map.Entry<String, Integer> entry : lemmas.entrySet()) {
-        LemmaEntity lemmaEntity;
-        String lemma = entry.getKey();
-            Optional<LemmaEntity> maybeLemma = lemmaRepository.findByUniqueKey(lemma, site.getId());
+        for (LemmaEntity lemma : lemmaEntities) {
+            Optional<LemmaEntity> maybeLemma = lemmaRepository.findByUniqueKey(lemma.getLemma(), site.getId());
             if (maybeLemma.isPresent()) {
-                lemmaEntity = maybeLemma.get();
-                updateLemmasIds.add(lemmaEntity.getId());
+                updateLemmasIds.add(maybeLemma.get().getId());
             } else {
-                lemmaEntity = LemmaEntity.builder()
-                        .lemma(entry.getKey())
-                        .site(site)
-                        .frequency(1)
-                        .build();
-                lemmaRepository.save(lemmaEntity);
+                lemmaRepository.save(lemma);
             }
-
-            IndexEntity index = IndexEntity.builder()
-                    .lemma(lemmaEntity)
-                    .page(page)
-                    .rate(Float.valueOf(entry.getValue()))
-                    .build();
-            indexRepository.save(index);
         }
         lemmaRepository.updateFrequencyAfterSave(updateLemmasIds);
+    }
+
+    @Override
+    public void saveIndexes(List<IndexEntity> indexes) {
+        indexRepository.saveAll(indexes);
     }
 
     @Override

@@ -6,17 +6,16 @@ import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.dto.BaseResponse;
+import searchengine.dto.model.LemmasDto;
+import searchengine.dto.model.PageDto;
 import searchengine.exceptions.IncorrectMethodCallException;
 import searchengine.exceptions.SiteOutOfBoundConfigFile;
-import searchengine.model.PageEntity;
-import searchengine.model.SearchStatus;
-import searchengine.model.SiteEntity;
+import searchengine.model.*;
 import searchengine.utils.LemmaFinder;
 import searchengine.utils.PageWalker;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -65,7 +64,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
 
     @Override
     public BaseResponse pageIndexing(String url) {
-        siteService.updateSitesFromConfigFile();
+        siteService.updateSitesInDatabaseFromConfigFile();
         Optional<SiteEntity> maybeSite = siteService.findSiteByUrl(url);
         if (maybeSite.isEmpty()) {
             throw new SiteOutOfBoundConfigFile(SITE_OUT_OF_BOUND_ERROR_MESSAGE);
@@ -77,9 +76,8 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
             Connection.Response response = siteService.getResponse(url);
             int statusCode = response.statusCode();
             Document document = response.parse();
-            String path = url.replace(site.getUrl(), "/");
-            PageEntity page = buildPage(statusCode, path, document.html(), site);
-            createIndex(site, page);
+            PageDto pageDto = new PageDto(statusCode, document.html());
+            createIndex(site, url, pageDto);
             siteService.updateSearchStatus(SearchStatus.INDEXED.name(), site.getId());
         } catch (IOException e) {
             siteService.updateLastError(CONNECT_ERROR_MESSAGE + site.getUrl(), site.getId());
@@ -90,13 +88,17 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
     }
 
     @Override
-    public void createIndex(SiteEntity site, PageEntity page) {
+    public void createIndex(SiteEntity site, String url, PageDto pageDto) {
         siteService.updateStatusTime(LocalDateTime.now(), site.getId());
         try {
+            PageEntity page = siteService.createPageEntity(pageDto, site, url);
             LemmaFinder lemmaFinder = LemmaFinder.getInstance();
-            HashMap<String, Integer> lemmas = lemmaFinder.getLemmas(page.getContent());
+            LemmasDto lemmasDto = new LemmasDto(lemmaFinder.getLemmas(page.getContent()));
+            List<LemmaEntity> lemmaEntities = siteService.createLemmaEntities(lemmasDto, site);
             siteService.savePage(page);
-            siteService.saveLemmasAndIndexes(lemmas, site, page);
+            siteService.saveLemmas(lemmaEntities, site);
+            List<IndexEntity> indexes = siteService.createIndexes(page, site, lemmasDto);
+            siteService.saveIndexes(indexes);
         } catch (IOException e) {
             System.out.println("LemmaFinder throw exception");
         }
@@ -131,14 +133,6 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
                 executorService.shutdown();
             }
         });
-    }
-    private PageEntity buildPage(Integer statusCode, String path, String html, SiteEntity site) {
-        return PageEntity.builder()
-                .code(statusCode)
-                .path(path)
-                .content(html)
-                .site(site)
-                .build();
     }
 
     public boolean getIndexing() {
