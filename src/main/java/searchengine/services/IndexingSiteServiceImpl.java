@@ -91,13 +91,13 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
     public void createIndex(SiteEntity site, String url, PageDto pageDto) {
         siteService.updateStatusTime(LocalDateTime.now(), site.getId());
         try {
-            PageEntity page = siteService.createPageEntity(pageDto, site, url);
+            PageEntity pageEntity = siteService.createPageEntity(pageDto, site, url);
             LemmaFinder lemmaFinder = LemmaFinder.getInstance();
-            LemmasDto lemmasDto = new LemmasDto(lemmaFinder.getLemmas(page.getContent()));
+            LemmasDto lemmasDto = new LemmasDto(lemmaFinder.getLemmas(pageEntity.getContent()));
             List<LemmaEntity> lemmaEntities = siteService.createLemmaEntities(lemmasDto, site);
-            siteService.savePage(page);
+            siteService.savePage(pageEntity);
             siteService.saveLemmas(lemmaEntities, site);
-            List<IndexEntity> indexes = siteService.createIndexes(page, site, lemmasDto);
+            List<IndexEntity> indexes = siteService.createIndexes(pageEntity, lemmaEntities, lemmasDto);
             siteService.saveIndexes(indexes);
         } catch (IOException e) {
             System.out.println("LemmaFinder throw exception");
@@ -127,7 +127,8 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
                 forkJoinPool.invoke(pageWalker);
                 siteService.updateSearchStatus(SearchStatus.INDEXED.name(), site.getId());
             } catch (RuntimeException e) {
-                siteService.updateSearchStatus(SearchStatus.FAILED.name(), site.getId());
+                throw new RuntimeException(e);
+//                siteService.updateSearchStatus(SearchStatus.FAILED.name(), site.getId());
             } finally {
                 pageWalker.setRunning(false);
                 executorService.shutdown();

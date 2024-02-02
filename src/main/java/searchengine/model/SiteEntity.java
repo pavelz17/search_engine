@@ -5,7 +5,9 @@ import lombok.*;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -55,28 +57,24 @@ public class SiteEntity {
         return new ArrayList<>(pages);
     }
 
-    public List<PageEntity> getPages(int startIndex, int endIndex) {
-        return new ArrayList<>(pages.subList(startIndex, endIndex));
-    }
-
     public int getPagesSize() {
         return pages.size();
     }
 
     public void addPage(PageEntity pageEntity) {
         pages.add(pageEntity);
-        pageEntity.setSite(this);
     }
 
     public List<LemmaEntity> getLemmas() {
         return new ArrayList<>(lemmas);
     }
 
-    public void addLemmaEntities(List<LemmaEntity> lemmas) {
-        this.lemmas.addAll(lemmas);
-        for (LemmaEntity lemma : lemmas) {
-            lemma.setSite(this);
-        }
+    public void addLemma(LemmaEntity lemma) {
+        this.lemmas.add(lemma);
+    }
+
+    public void clearPages() {
+        pages.clear();
     }
 
     public void clearLemmas() {

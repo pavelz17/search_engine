@@ -59,7 +59,9 @@ public class PageWalker extends RecursiveAction {
         } catch (InterruptedException | CancellationException e) {
             site.setLastError(INTERRUPT_INDEXING_ERROR_MESSAGE);
             siteService.updateLastError(site.getLastError(), site.getId());
-            throw new RuntimeException();
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

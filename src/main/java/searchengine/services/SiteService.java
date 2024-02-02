@@ -22,7 +22,7 @@ public interface SiteService {
 
     List<LemmaEntity> createLemmaEntities(LemmasDto lemmasDto, SiteEntity site);
 
-    List<IndexEntity> createIndexes(PageEntity page, SiteEntity site, LemmasDto lemmasDto);
+    List<IndexEntity> createIndexes(PageEntity page, List<LemmaEntity> lemmaEntities, LemmasDto lemmasDto);
 
     SiteEntity saveSite(String url, String name);
 

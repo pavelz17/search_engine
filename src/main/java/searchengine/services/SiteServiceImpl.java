@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class SiteServiceImpl implements SiteService {
+    private static final int LEMMAS_CAPACITY = 30;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
@@ -63,15 +64,17 @@ public class SiteServiceImpl implements SiteService {
     @Override
     public List<LemmaEntity> createLemmaEntities(LemmasDto lemmasDto, SiteEntity site) {
         List<LemmaEntity> lemmaEntities = lemmasMapper.mapFrom(lemmasDto);
-        site.addLemmaEntities(lemmaEntities);
+        for (LemmaEntity lemmaEntity : lemmaEntities) {
+            lemmaEntity.setSite(site);
+        }
         return lemmaEntities;
     }
 
     @Override
-    public List<IndexEntity> createIndexes(PageEntity page, SiteEntity site, LemmasDto lemmasDto) {
+    public List<IndexEntity> createIndexes(PageEntity page, List<LemmaEntity> lemmaEntities, LemmasDto lemmasDto) {
         List<IndexEntity> indexes = new ArrayList<>();
         Map<String, Integer> lemmas = lemmasDto.lemmas();
-        for (LemmaEntity lemma : site.getLemmas()) {
+        for (LemmaEntity lemma : lemmaEntities) {
             IndexEntity indexEntity = IndexEntity.builder()
                     .page(page)
                     .lemma(lemma)
@@ -102,16 +105,34 @@ public class SiteServiceImpl implements SiteService {
 
     @Override
     public void saveLemmas(List<LemmaEntity> lemmaEntities, SiteEntity site) {
-        Set<Integer> updateLemmasIds = new HashSet<>();
-        for (LemmaEntity lemma : lemmaEntities) {
-            Optional<LemmaEntity> maybeLemma = lemmaRepository.findByUniqueKey(lemma.getLemma(), site.getId());
+        Set<Integer> lemmasIdForUpdate = new HashSet<>(LEMMAS_CAPACITY);
+        Set<LemmaEntity> lemmasForSave = new HashSet<>(LEMMAS_CAPACITY);
+        
+        for (int i = 0; i < lemmaEntities.size(); i++) {
+            LemmaEntity lemmaEntity = lemmaEntities.get(i);
+            Optional<LemmaEntity> maybeLemma = lemmaRepository.findByUniqueKey(lemmaEntity.getLemma(), site.getId());
             if (maybeLemma.isPresent()) {
-                updateLemmasIds.add(maybeLemma.get().getId());
+                LemmaEntity presentLemma = maybeLemma.get();
+                lemmaEntities.set(i, presentLemma);
+                lemmasIdForUpdate.add(presentLemma.getId());
             } else {
-                lemmaRepository.save(lemma);
+                lemmasForSave.add(lemmaEntity);
+            }
+            if (lemmasIdForUpdate.size() >= LEMMAS_CAPACITY) {
+                lemmaRepository.updateFrequencyAfterSave(lemmasIdForUpdate);
+                lemmasIdForUpdate.clear();
+            }
+            if (lemmasForSave.size() >= LEMMAS_CAPACITY) {
+                lemmaRepository.saveAll(lemmasForSave);
+                lemmasForSave.clear();
             }
         }
-        lemmaRepository.updateFrequencyAfterSave(updateLemmasIds);
+        if (!lemmasIdForUpdate.isEmpty()) {
+            lemmaRepository.updateFrequencyAfterSave(lemmasIdForUpdate);
+        }
+        if (!lemmasForSave.isEmpty()) {
+            lemmaRepository.saveAll(lemmasForSave);
+        }
     }
 
     @Override
