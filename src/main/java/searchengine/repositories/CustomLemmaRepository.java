@@ -2,6 +2,9 @@ package searchengine.repositories;
 
 import searchengine.model.LemmaEntity;
 
+import java.util.List;
+import java.util.Set;
+
 public interface CustomLemmaRepository {
-    void saveLemmas(Iterable<LemmaEntity> lemmas);
+    Set<LemmaEntity> findAllByLemma(List<LemmaEntity> lemmas);
 }

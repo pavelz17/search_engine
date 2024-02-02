@@ -1,44 +1,50 @@
 package searchengine.repositories;
 
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.LemmaEntity;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-
 public class CustomLemmaRepositoryImpl implements CustomLemmaRepository {
-    private static final String PREFIX = "INSERT INTO lemma (lemma, site_id) VALUES ";
-    private static final String SUFFIX = " ON DUPLICATE KEY UPDATE frequency = frequency + 1";
 
     @PersistenceContext
     private EntityManager entityManager;
 
-
-    @Modifying
     @Transactional
     @Override
-    public void saveLemmas(Iterable<LemmaEntity> lemmas) {
-        ArrayList<String> values = new ArrayList<>();
+    public Set<LemmaEntity> findAllByLemma(List<LemmaEntity> lemmaEntities) {
+        String prefix = "select l from LemmaEntity l where l.lemma in (";
+        String suffix = " and l.site.id = :siteId";
+        Set<LemmaEntity> presentLemmas = new HashSet<>();
 
-        for (LemmaEntity lemma : lemmas) {
-            StringBuilder builder = new StringBuilder();
-            builder.append("(")
-                    .append("'")
-                    .append(lemma.getLemma())
-                    .append("'")
-                    .append(",")
-                    .append(lemma.getSite().getId())
-                    .append(")");
-            values.add(builder.toString());
+        Map<Integer, List<String>> groupLemmasBySiteId = lemmaEntities.stream()
+                .collect(Collectors.groupingBy(lemma -> lemma.getSite().getId(),
+                         Collectors.mapping(LemmaEntity::getLemma, Collectors.toList())));
+
+        for (Map.Entry<Integer, List<String>> entry : groupLemmasBySiteId.entrySet()) {
+            List<String> lemmas = entry.getValue();
+            StringBuilder query = new StringBuilder();
+            query.append(prefix);
+            for (String lemma : lemmas) {
+                 query.append("'")
+                        .append(lemma)
+                        .append("'")
+                        .append(",");
+            }
+            query.replace(query.length() - 1, query.length(), ")");
+            query.append(suffix);
+            List<LemmaEntity> resultList = entityManager.createQuery(query.toString(), LemmaEntity.class)
+                                                        .setParameter("siteId", entry.getKey())
+                                                        .getResultList();
+
+            presentLemmas.addAll(resultList);
         }
-
-        String query = values.stream()
-                .collect(Collectors.joining(",", PREFIX, SUFFIX));
-
-        entityManager.createNativeQuery(query).executeUpdate();
+        return presentLemmas;
     }
 }

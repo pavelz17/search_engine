@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class SiteServiceImpl implements SiteService {
-    private static final int LEMMAS_CAPACITY = 30;
+    private static final int LEMMAS_CAPACITY = 100;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
@@ -107,31 +107,26 @@ public class SiteServiceImpl implements SiteService {
     public void saveLemmas(List<LemmaEntity> lemmaEntities, SiteEntity site) {
         Set<Integer> lemmasIdForUpdate = new HashSet<>(LEMMAS_CAPACITY);
         Set<LemmaEntity> lemmasForSave = new HashSet<>(LEMMAS_CAPACITY);
-        
-        for (int i = 0; i < lemmaEntities.size(); i++) {
-            LemmaEntity lemmaEntity = lemmaEntities.get(i);
-            Optional<LemmaEntity> maybeLemma = lemmaRepository.findByUniqueKey(lemmaEntity.getLemma(), site.getId());
-            if (maybeLemma.isPresent()) {
-                LemmaEntity presentLemma = maybeLemma.get();
-                lemmaEntities.set(i, presentLemma);
-                lemmasIdForUpdate.add(presentLemma.getId());
-            } else {
-                lemmasForSave.add(lemmaEntity);
+        Set<LemmaEntity> presentLemmas = lemmaRepository.findAllByLemma(lemmaEntities);
+
+        if (presentLemmas.isEmpty()) {
+            lemmaRepository.saveAll(lemmaEntities);
+        } else {
+            for (LemmaEntity lemma : lemmaEntities) {
+                if (!presentLemmas.contains(lemma)) {
+                    lemmasForSave.add(lemma);
+                }
             }
-            if (lemmasIdForUpdate.size() >= LEMMAS_CAPACITY) {
-                lemmaRepository.updateFrequencyAfterSave(lemmasIdForUpdate);
-                lemmasIdForUpdate.clear();
+            for (LemmaEntity lemma : presentLemmas) {
+                lemmasIdForUpdate.add(lemma.getId());
             }
-            if (lemmasForSave.size() >= LEMMAS_CAPACITY) {
-                lemmaRepository.saveAll(lemmasForSave);
-                lemmasForSave.clear();
-            }
-        }
-        if (!lemmasIdForUpdate.isEmpty()) {
-            lemmaRepository.updateFrequencyAfterSave(lemmasIdForUpdate);
-        }
-        if (!lemmasForSave.isEmpty()) {
+
             lemmaRepository.saveAll(lemmasForSave);
+            lemmaRepository.updateFrequencyAfterSave(lemmasIdForUpdate);
+
+            lemmaEntities.clear();
+            lemmaEntities.addAll(lemmasForSave);
+            lemmaEntities.addAll(presentLemmas);
         }
     }
 

@@ -10,6 +10,7 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
+@EqualsAndHashCode(of = {"lemma", "site"})
 @Builder
 @Entity
 @Table(name = "lemma", indexes = @Index(name = "unique_lemma", columnList = "lemma, site_id", unique = true))

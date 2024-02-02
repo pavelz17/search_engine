@@ -5,13 +5,12 @@ import lombok.*;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
+@EqualsAndHashCode(of = {"id", "url"})
 @Setter
 @Builder
 @Entity
@@ -75,6 +74,7 @@ public class SiteEntity {
 
     public void clearPages() {
         pages.clear();
+
     }
 
     public void clearLemmas() {
