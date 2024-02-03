@@ -127,8 +127,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
                 forkJoinPool.invoke(pageWalker);
                 siteService.updateSearchStatus(SearchStatus.INDEXED.name(), site.getId());
             } catch (RuntimeException e) {
-                throw new RuntimeException(e);
-//                siteService.updateSearchStatus(SearchStatus.FAILED.name(), site.getId());
+                siteService.updateSearchStatus(SearchStatus.FAILED.name(), site.getId());
             } finally {
                 pageWalker.setRunning(false);
                 executorService.shutdown();
