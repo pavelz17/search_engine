@@ -72,6 +72,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         SiteEntity site = maybeSite.get();
         Optional<PageEntity> maybePage = siteService.findPageByUrl(site, url);
         maybePage.ifPresent(page -> siteService.deletePageById(page.getId()));
+        indexing = true;
         try {
             Connection.Response response = siteService.getResponse(url);
             int statusCode = response.statusCode();
@@ -82,6 +83,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         } catch (IOException e) {
             siteService.updateLastError(CONNECT_ERROR_MESSAGE + site.getUrl(), site.getId());
         }
+        indexing = false;
         BaseResponse response = new BaseResponse();
         response.setResult(true);
         return response;
@@ -93,11 +95,11 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         try {
             PageEntity pageEntity = siteService.createPageEntity(pageDto, site, url);
             LemmaFinder lemmaFinder = LemmaFinder.getInstance();
-            LemmasDto lemmasDto = new LemmasDto(lemmaFinder.getLemmas(pageEntity.getContent()));
-            List<LemmaEntity> lemmaEntities = siteService.createLemmaEntities(lemmasDto, site);
+            LemmasDto lemmas = new LemmasDto(lemmaFinder.getLemmas(pageEntity.getContent()));
+            List<LemmaEntity> lemmaEntities = siteService.createLemmaEntities(lemmas, site);
             siteService.savePage(pageEntity);
             siteService.saveLemmas(lemmaEntities, site);
-            List<IndexEntity> indexes = siteService.createIndexes(pageEntity, lemmaEntities, lemmasDto);
+            List<IndexEntity> indexes = siteService.createIndexes(pageEntity, lemmaEntities, lemmas);
             siteService.saveIndexes(indexes);
         } catch (IOException e) {
             System.out.println("LemmaFinder throw exception");

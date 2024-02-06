@@ -11,9 +11,9 @@ import java.util.List;
 public class LemmasMapper implements Mapper<LemmasDto, List<LemmaEntity>>{
 
     @Override
-    public List<LemmaEntity> mapFrom(LemmasDto lemmasDto) {
+    public List<LemmaEntity> mapFrom(LemmasDto lemmas) {
         List<LemmaEntity> lemmaEntities = new ArrayList<>();
-        for (String lemma : lemmasDto.lemmas().keySet()) {
+        for (String lemma : lemmas.lemmas().keySet()) {
             LemmaEntity lemmaEntity = LemmaEntity.builder()
                     .lemma(lemma)
                     .frequency(1)

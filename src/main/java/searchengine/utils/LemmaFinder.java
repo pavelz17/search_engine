@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class LemmaFinder {
-    private static final String REGEX_FOR_PARTICLES = "МЕЖД|СОЮЗ|ПРЕДЛ";
+    private static final String REGEX_FOR_PARTICLES = "МЕЖД|СОЮЗ|ПРЕДЛ|ЧАСТ";
     private static final String RUSSIAN_WORDS = "[^а-я\\s]";
     private LuceneMorphology luceneMorphology;
 

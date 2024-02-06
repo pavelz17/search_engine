@@ -8,10 +8,10 @@ import searchengine.model.PageEntity;
 public class PageMapper implements Mapper<PageDto, PageEntity> {
 
     @Override
-    public PageEntity mapFrom(PageDto pageDto) {
+    public PageEntity mapFrom(PageDto page) {
         return  PageEntity.builder()
-                .code(pageDto.code())
-                .content(pageDto.content())
+                .code(page.code())
+                .content(page.content())
                 .build();
     }
 }

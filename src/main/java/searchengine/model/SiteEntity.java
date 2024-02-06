@@ -19,10 +19,10 @@ import java.util.List;
 public class SiteEntity {
 
     @Transient
-    private static final int PAGES_INIT_CAPACITY = 200;
+    private static final int PAGES_INIT_CAPACITY = 20;
 
     @Transient
-    private static final int LEMMA_SET_INIT_CAPACITY = 5000;
+    private static final int LEMMA_SET_INIT_CAPACITY = 2000;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -68,8 +68,8 @@ public class SiteEntity {
         return new ArrayList<>(lemmas);
     }
 
-    public void addLemma(LemmaEntity lemma) {
-        this.lemmas.add(lemma);
+    public void addLemmas(List<LemmaEntity> lemmas) {
+        this.lemmas.addAll(lemmas);
     }
 
     public void clearPages() {
