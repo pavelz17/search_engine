@@ -14,7 +14,6 @@ import searchengine.services.StatisticsService;
 @RestController
 @RequestMapping("/api")
 public class ApiController {
-    private static final String DEFAULT_SITE = "all";
     private static final String DEFAULT_OFFSET = "0";
     private static final String DEFAULT_LIMIT = "20";
     private final StatisticsService statisticsService;
@@ -44,7 +43,7 @@ public class ApiController {
 
     @GetMapping("/search")
     public ResponseEntity<BaseResponse> search(@RequestParam String query,
-                                               @RequestParam(defaultValue = DEFAULT_SITE) String site,
+                                               @RequestParam(required = false) String site,
                                                @RequestParam(defaultValue = DEFAULT_OFFSET) Integer offset,
                                                @RequestParam(defaultValue = DEFAULT_LIMIT) Integer limit) {
         SearchOptions searchOptions = SearchOptions.builder()

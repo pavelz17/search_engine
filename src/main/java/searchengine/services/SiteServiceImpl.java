@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class SiteServiceImpl implements SiteService {
     private static final int LEMMAS_CAPACITY = 100;
+    private static final String REGEX_SITE_URL = "^https?://.+\\.(ru|com|org)/";
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
@@ -153,7 +154,7 @@ public class SiteServiceImpl implements SiteService {
 
     @Override
     public Optional<SiteEntity> findSiteByUrl(String url) {
-        Pattern pattern = Pattern.compile("^https?://.+\\.(ru|com|org)/");
+        Pattern pattern = Pattern.compile(REGEX_SITE_URL);
         Matcher matcher = pattern.matcher(url);
         String rootUrl = "";
 
