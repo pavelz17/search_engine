@@ -133,7 +133,6 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
                 siteService.updateSearchStatus(SearchStatus.INDEXED.name(), site.getId());
             } catch (RuntimeException e) {
                 siteService.updateSearchStatus(SearchStatus.FAILED.name(), site.getId());
-                throw new RuntimeException(e);
             } finally {
                 executorService.shutdown();
             }

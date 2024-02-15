@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.JsoupConf;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -108,6 +109,7 @@ public class SiteServiceImpl implements SiteService {
         return pageRepository.save(page);
     }
 
+    @Transactional
     @Override
     public void saveLemmas(List<LemmaEntity> lemmaEntities, SiteEntity site) {
         Set<Integer> lemmasIdForUpdate = new HashSet<>(LEMMAS_CAPACITY);
