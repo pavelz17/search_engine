@@ -56,7 +56,7 @@ public class SearchServiceImpl implements SearchService {
                 searchInfo.setSiteName(site.getName());
                 searchInfo.setUri(page.getPath());
                 searchInfo.setTitle(siteService.getPageTitle(page));
-                searchInfo.setSnippet(siteService.getSnippet(page, searchOptions.query()));
+                searchInfo.setSnippet(siteService.getSnippet(page, query));
                 searchInfo.setRelevance(siteService.getPageRelevance(page));
                 data.add(searchInfo);
             }
