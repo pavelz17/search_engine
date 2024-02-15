@@ -16,9 +16,6 @@ import java.util.List;
 @Table(name = "lemma", indexes = @Index(name = "unique_lemma", columnList = "lemma, site_id", unique = true))
 public class LemmaEntity {
 
-    @Transient
-    private final static int INDEX_CAPACITY = 500;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -34,7 +31,7 @@ public class LemmaEntity {
     private Integer frequency;
 
     @OneToMany(mappedBy = "lemma")
-    private final List<IndexEntity> indexes = new ArrayList<>(INDEX_CAPACITY);
+    private final List<IndexEntity> indexes = new ArrayList<>();
 
     public List<IndexEntity> getIndexes() {
         return new ArrayList<>(indexes);

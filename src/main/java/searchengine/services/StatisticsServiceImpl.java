@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import searchengine.dto.statistics.*;
 import searchengine.model.SiteEntity;
 
-import java.time.ZoneOffset;
+import java.time.OffsetTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,7 +52,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         item.setUrl(site.getUrl());
         item.setName(site.getName());
         item.setStatus(site.getStatus().name());
-        item.setStatusTime(site.getStatusTime().toEpochSecond(ZoneOffset.UTC));
+        item.setStatusTime(site.getStatusTime().toEpochSecond(OffsetTime.now().getOffset()));
         item.setPages(siteService.getPagesCountBySiteId(site.getId()));
         item.setLemmas(siteService.getLemmasCountBySiteId(site.getId()));
         return item;
@@ -63,7 +63,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         item.setUrl(site.getUrl());
         item.setName(site.getName());
         item.setStatus(site.getStatus().name());
-        item.setStatusTime(site.getStatusTime().toEpochSecond(ZoneOffset.UTC));
+        item.setStatusTime(site.getStatusTime().toEpochSecond(OffsetTime.now().getOffset()));
         item.setPages(siteService.getPagesCountBySiteId(site.getId()));
         item.setLemmas(siteService.getLemmasCountBySiteId(site.getId()));
         item.setError(site.getLastError());

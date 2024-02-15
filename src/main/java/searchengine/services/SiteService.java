@@ -44,6 +44,10 @@ public interface SiteService {
 
     Optional<PageEntity> findPageByUrl(SiteEntity site, String url);
 
+    List<PageEntity> getPagesByLemma(LemmaEntity lemmaEntity);
+
+    List<LemmaEntity> findLemmasBySiteId(List<String> lemmas, Integer siteId);
+
     void updateStatusTime(LocalDateTime localDateTime, Integer id);
 
     void updateLastError(String error, Integer id);
@@ -61,4 +65,10 @@ public interface SiteService {
     int getLemmasCountBySiteId(Integer id);
 
     Connection.Response getResponse(String url) throws IOException;
+
+    String getPageTitle(PageEntity page);
+
+    String getSnippet(PageEntity page, String query);
+
+    Float getPageRelevance(PageEntity page);
 }

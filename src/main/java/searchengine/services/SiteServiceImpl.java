@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +46,6 @@ public class SiteServiceImpl implements SiteService {
 
     @Override
     public void updateSitesInDatabaseFromConfigFile() {
-
         for (Site site : sitesFromConfigFile.getSites()) {
             if (this.findSiteByUrl(site.getUrl()).isEmpty()) {
                 this.saveSite(site.getUrl(), site.getName());
@@ -59,15 +59,17 @@ public class SiteServiceImpl implements SiteService {
         String path = url.replace(site.getUrl(), "/");
         pageEntity.setPath(path);
         pageEntity.setSite(site);
+
         return pageEntity;
     }
 
     @Override
-    public List<LemmaEntity> createLemmaEntities(LemmasDto lemmasDto, SiteEntity site) {
-        List<LemmaEntity> lemmaEntities = lemmasMapper.mapFrom(lemmasDto);
+    public List<LemmaEntity> createLemmaEntities(LemmasDto lemmas, SiteEntity site) {
+        List<LemmaEntity> lemmaEntities = lemmasMapper.mapFrom(lemmas);
         for (LemmaEntity lemmaEntity : lemmaEntities) {
             lemmaEntity.setSite(site);
         }
+
         return lemmaEntities;
     }
 
@@ -83,6 +85,7 @@ public class SiteServiceImpl implements SiteService {
                     .build();
             indexes.add(indexEntity);
         }
+
         return indexes;
     }
 
@@ -96,6 +99,7 @@ public class SiteServiceImpl implements SiteService {
                 .name(name)
                 .url(siteUrl)
                 .build();
+
         return siteRepository.save(siteEntity);
     }
 
@@ -108,7 +112,7 @@ public class SiteServiceImpl implements SiteService {
     public void saveLemmas(List<LemmaEntity> lemmaEntities, SiteEntity site) {
         Set<Integer> lemmasIdForUpdate = new HashSet<>(LEMMAS_CAPACITY);
         Set<LemmaEntity> lemmasForSave = new HashSet<>(LEMMAS_CAPACITY);
-        Set<LemmaEntity> presentLemmas = lemmaRepository.findAllByLemma(lemmaEntities);
+        Set<LemmaEntity> presentLemmas = lemmaRepository.findAllByLemmaAndSiteId(lemmaEntities);
 
         if (presentLemmas.isEmpty()) {
             lemmaRepository.saveAll(lemmaEntities);
@@ -161,13 +165,20 @@ public class SiteServiceImpl implements SiteService {
         if (matcher.find()) {
             rootUrl = matcher.group();
         }
+
         return siteRepository.findByUrl(rootUrl);
     }
 
     @Override
     public Optional<PageEntity> findPageByUrl(SiteEntity site, String url) {
         String path = url.replace(site.getUrl(), "/");
+
         return pageRepository.findByPath(path);
+    }
+
+    @Override
+    public List<LemmaEntity> findLemmasBySiteId(List<String> lemmas, Integer siteId) {
+        return lemmaRepository.findLemmasBySiteId(lemmas, siteId);
     }
 
 
@@ -192,6 +203,66 @@ public class SiteServiceImpl implements SiteService {
         return Jsoup.connect(url).userAgent(jsoupConf.getUserAgent())
                 .referrer(jsoupConf.getReferrer())
                 .execute();
+    }
+
+    @Override
+    public String getPageTitle(PageEntity page) {
+        String title = "title";
+        Pattern pattern = Pattern.compile("(?<=<title>).+(?=</title>)");
+        Matcher matcher = pattern.matcher(page.getContent());
+        if (matcher.find()) {
+            title = matcher.group();
+        }
+
+        return title;
+    }
+
+    @Override
+    public String getSnippet(PageEntity page, String query) {
+        String[] queryWords = query.replaceAll("\\p{Punct}", " ")
+                                   .split("\\s+");
+        String content = Jsoup.parse(page.getContent()).text();
+        StringBuilder snippetBuilder = new StringBuilder();
+
+        for (String word : queryWords) {
+            Pattern pattern = Pattern.compile("\\b.{5,10}" + word + "[а-я]*.{5,10}\\b");
+            Matcher matcher = pattern.matcher(content);
+            while (matcher.find()) {
+                String snippet = matcher.group();
+                snippet = snippet.replace(word, "<b>"+word+"</b>");
+                snippetBuilder.append(snippet).append(System.lineSeparator());
+            }
+        }
+
+        return snippetBuilder.toString();
+    }
+
+    @Override
+    public Float getPageRelevance(PageEntity page) {
+        List<IndexEntity> indexes = page.getIndexes();
+        Float relevance = 0.0f;
+
+        for (IndexEntity index : indexes) {
+            relevance += index.getRate();
+        }
+
+        return relevance;
+    }
+
+    @Override
+    public List<PageEntity> getPagesByLemma(LemmaEntity lemma) {
+        List<PageEntity> pages = new ArrayList<>();
+        List<IndexEntity> indexes =  indexRepository.findAllByLemma(lemma.getId());
+        Map<PageEntity, List<IndexEntity>> pageIndexes = indexes.stream()
+                .collect(Collectors.groupingBy(IndexEntity::getPage));
+
+        for (Map.Entry<PageEntity, List<IndexEntity>> entry : pageIndexes.entrySet()) {
+            PageEntity page = entry.getKey();
+            page.addAllIndexes(entry.getValue());
+            pages.add(page);
+        }
+
+        return pages;
     }
 
     @Override
@@ -225,6 +296,7 @@ public class SiteServiceImpl implements SiteService {
         List<IndexEntity> indexes = indexRepository.findAllByPageId(id);
         List<LemmaEntity> deleteLemmas = new ArrayList<>();
         List<Integer> updateLemmasIds = new ArrayList<>();
+
         for (IndexEntity index : indexes) {
             LemmaEntity lemma = index.getLemma();
             int frequency = lemma.getFrequency();
@@ -234,6 +306,7 @@ public class SiteServiceImpl implements SiteService {
                 deleteLemmas.add(lemma);
             }
         }
+
         if (!deleteLemmas.isEmpty()) {
             lemmaRepository.deleteAll(deleteLemmas);
         }

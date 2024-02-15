@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 public class LemmaFinder {
     private static final String REGEX_FOR_PARTICLES = "МЕЖД|СОЮЗ|ПРЕДЛ|ЧАСТ";
-    private static final String RUSSIAN_WORDS = "[^а-я\\s]";
     private LuceneMorphology luceneMorphology;
 
     public static LemmaFinder getInstance() throws IOException {
@@ -28,22 +27,32 @@ public class LemmaFinder {
     private LemmaFinder() {
     }
 
-    public HashMap<String, Integer> getLemmas(String html) {
+    public HashMap<String, Integer> getLemmasFromHtmlPage(String html) {
         String text = Jsoup.parse(html).text();
-        String[] words = getWords(text, RUSSIAN_WORDS);
+        String[] words = getWords(text);
 
+            return Arrays.stream(words)
+                    .filter(word -> !word.isEmpty())
+                    .filter((word) -> isNotBelongToParticles(luceneMorphology.getMorphInfo(word)))
+                    .map(word -> luceneMorphology.getNormalForms(word))
+                    .filter(list -> !list.isEmpty())
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toMap(
+                            Function.identity(),
+                            value -> 1,
+                            (oldValue, newValue) -> oldValue + 1,
+                            HashMap::new
+                    ));
+    }
+
+    public List<String> getLemmasFromText(String text) {
+        String[] words = getWords(text);
         return Arrays.stream(words)
                 .filter((word) -> isNotBelongToParticles(luceneMorphology.getMorphInfo(word)))
                 .map(word -> luceneMorphology.getNormalForms(word))
                 .filter(list -> !list.isEmpty())
                 .flatMap(Collection::stream)
-                .collect(Collectors.toMap(
-                        Function.identity(),
-                        value -> 1,
-                        (oldValue, newValue) -> oldValue + 1,
-                        HashMap::new
-                ));
-
+                .collect(Collectors.toList());
     }
 
     private boolean isNotBelongToParticles(List<String> morphInfo) {
@@ -57,9 +66,9 @@ public class LemmaFinder {
         return true;
     }
 
-    private String[] getWords(String text, String words) {
+    private String[] getWords(String text) {
         return text.toLowerCase()
-                .replaceAll(words, " ")
+                .replaceAll("[^а-я\\s]", " ")
                 .trim()
                 .split("\\s+");
     }
