@@ -21,7 +21,6 @@ indexing-settings:
     - url: https://www.svetlovka.ru/
       name: Svetlovka.Ru
 
-
 jsoup-connect:
   user-agent: HeliontSearchBot
   referrer: https://ya.ru

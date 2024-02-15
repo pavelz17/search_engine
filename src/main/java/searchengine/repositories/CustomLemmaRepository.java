@@ -6,5 +6,5 @@ import java.util.List;
 import java.util.Set;
 
 public interface CustomLemmaRepository {
-    Set<LemmaEntity> findAllByLemma(List<LemmaEntity> lemmas);
+    Set<LemmaEntity> findAllByLemmaAndSiteId(List<LemmaEntity> lemmas);
 }

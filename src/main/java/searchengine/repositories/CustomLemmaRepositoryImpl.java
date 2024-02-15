@@ -18,7 +18,7 @@ public class CustomLemmaRepositoryImpl implements CustomLemmaRepository {
 
     @Transactional
     @Override
-    public Set<LemmaEntity> findAllByLemma(List<LemmaEntity> lemmaEntities) {
+    public Set<LemmaEntity> findAllByLemmaAndSiteId(List<LemmaEntity> lemmaEntities) {
         String prefix = "select l from LemmaEntity l where l.lemma in (";
         String suffix = " and l.site.id = :siteId";
         Set<LemmaEntity> presentLemmas = new HashSet<>();

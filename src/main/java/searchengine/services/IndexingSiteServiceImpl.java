@@ -8,6 +8,7 @@ import searchengine.config.Site;
 import searchengine.dto.BaseResponse;
 import searchengine.dto.model.LemmasDto;
 import searchengine.dto.model.PageDto;
+import searchengine.exceptions.ErrorMessage;
 import searchengine.exceptions.IncorrectMethodCallException;
 import searchengine.exceptions.SiteOutOfBoundConfigFile;
 import searchengine.model.*;
@@ -25,10 +26,6 @@ import java.util.concurrent.ForkJoinPool;
 @Service
 @RequiredArgsConstructor
 public class IndexingSiteServiceImpl implements IndexingSiteService {
-    private static final String START_INDEXING_ERROR_MESSAGE = "Индексация уже запущена";
-    private static final String STOP_INDEXING_ERROR_MESSAGE = "Индексация не запущена";
-    private static final String SITE_OUT_OF_BOUND_ERROR_MESSAGE = "Данная страница находится за пределами сайтов, указанных в конфигурационном файле";
-    private static final String CONNECT_ERROR_MESSAGE = "Не удалось подключиться к странице: ";
     private final SiteService siteService;
     private ForkJoinPool forkJoinPool;
     private ExecutorService executorService;
@@ -37,7 +34,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
     @Override
     public BaseResponse startIndexing() {
         if (getIndexing()) {
-            throw new IncorrectMethodCallException(START_INDEXING_ERROR_MESSAGE);
+            throw new IncorrectMethodCallException(ErrorMessage.START_INDEXING.getMessage());
         }
         List<Site> sites = siteService.getSitesFromConfig();
         prepareForIndexing(sites.size());
@@ -48,17 +45,19 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         }
         BaseResponse response = new BaseResponse();
         response.setResult(true);
+
         return response;
     }
 
     @Override
     public BaseResponse stopIndexing() {
         if (!getIndexing()) {
-            throw new IncorrectMethodCallException(STOP_INDEXING_ERROR_MESSAGE);
+            throw new IncorrectMethodCallException(ErrorMessage.STOP_INDEXING.getMessage());
         }
         forkJoinPool.shutdownNow();
         BaseResponse response = new BaseResponse();
         response.setResult(true);
+
         return response;
     }
 
@@ -67,7 +66,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         siteService.updateSitesInDatabaseFromConfigFile();
         Optional<SiteEntity> maybeSite = siteService.findSiteByUrl(url);
         if (maybeSite.isEmpty()) {
-            throw new SiteOutOfBoundConfigFile(SITE_OUT_OF_BOUND_ERROR_MESSAGE);
+            throw new SiteOutOfBoundConfigFile(ErrorMessage.SITE_OUT_OF_BOUND_CONFIG_FILE.getMessage());
         }
         SiteEntity site = maybeSite.get();
         Optional<PageEntity> maybePage = siteService.findPageByUrl(site, url);
@@ -81,11 +80,12 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
             createIndex(site, url, pageDto);
             siteService.updateSearchStatus(SearchStatus.INDEXED.name(), site.getId());
         } catch (IOException e) {
-            siteService.updateLastError(CONNECT_ERROR_MESSAGE + site.getUrl(), site.getId());
+            siteService.updateLastError(ErrorMessage.CONNECT_ERROR.getMessage() + site.getUrl(), site.getId());
         }
         indexing = false;
         BaseResponse response = new BaseResponse();
         response.setResult(true);
+
         return response;
     }
 
@@ -95,20 +95,23 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         try {
             PageEntity pageEntity = siteService.createPageEntity(pageDto, site, url);
             LemmaFinder lemmaFinder = LemmaFinder.getInstance();
-            LemmasDto lemmas = new LemmasDto(lemmaFinder.getLemmas(pageEntity.getContent()));
+            LemmasDto lemmas = new LemmasDto(lemmaFinder.getLemmasFromHtmlPage(pageEntity.getContent()));
             List<LemmaEntity> lemmaEntities = siteService.createLemmaEntities(lemmas, site);
-            siteService.savePage(pageEntity);
-            siteService.saveLemmas(lemmaEntities, site);
-            List<IndexEntity> indexes = siteService.createIndexes(pageEntity, lemmaEntities, lemmas);
-            siteService.saveIndexes(indexes);
+            if (!lemmaEntities.isEmpty()) {
+                siteService.savePage(pageEntity);
+                siteService.saveLemmas(lemmaEntities, site);
+                List<IndexEntity> indexes = siteService.createIndexes(pageEntity, lemmaEntities, lemmas);
+                siteService.saveIndexes(indexes);
+            }
         } catch (IOException e) {
-            System.out.println("LemmaFinder throw exception");
+            throw new RuntimeException(e);
         }
     }
 
     private void prepareForIndexing(int size) {
         forkJoinPool = new ForkJoinPool();
         executorService = Executors.newFixedThreadPool(size);
+
         Thread checkIndexingStatus = new Thread(() -> {
             while (true) {
                 if(executorService.isTerminated() || forkJoinPool.isShutdown()) {
@@ -117,6 +120,7 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
                 }
             }
         });
+
         indexing = true;
         checkIndexingStatus.start();
     }
@@ -125,13 +129,12 @@ public class IndexingSiteServiceImpl implements IndexingSiteService {
         PageWalker pageWalker = new PageWalker(site.getUrl(), site, siteService, this);
         executorService.execute(() -> {
             try {
-                pageWalker.setRunning(true);
                 forkJoinPool.invoke(pageWalker);
                 siteService.updateSearchStatus(SearchStatus.INDEXED.name(), site.getId());
             } catch (RuntimeException e) {
                 siteService.updateSearchStatus(SearchStatus.FAILED.name(), site.getId());
+                throw new RuntimeException(e);
             } finally {
-                pageWalker.setRunning(false);
                 executorService.shutdown();
             }
         });

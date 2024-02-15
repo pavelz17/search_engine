@@ -15,4 +15,8 @@ public interface IndexRepository extends CrudRepository<IndexEntity, Integer> {
     @Transactional
     @Query(value = "SELECT * FROM page_index p WHERE p.page_id = :id", nativeQuery = true)
     List<IndexEntity> findAllByPageId(Integer id);
+
+
+    @Query(value = "SELECT * FROM page_index pi WHERE pi.lemma_id = :id", nativeQuery = true)
+    List<IndexEntity> findAllByLemma(Integer id);
 }

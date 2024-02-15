@@ -29,13 +29,8 @@ public interface LemmaRepository extends CrudRepository<LemmaEntity, Integer>, C
     Optional<LemmaEntity> findByUniqueKey(String lemma, Integer siteId);
 
     @Transactional
-    @Query(value = "SELECT * FROM lemma l WHERE l.lemma IN (:lemmas)", nativeQuery = true)
-    Set<LemmaEntity> findByLemma(List<String> lemmas);
-
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE lemma SET frequency = frequency + 1 WHERE id = :id", nativeQuery = true)
-    void update(Integer id);
+    @Query(value = "SELECT * FROM lemma l WHERE l.lemma IN (:lemmas) AND site_id = :siteId", nativeQuery = true)
+    List<LemmaEntity> findLemmasBySiteId(List<String> lemmas, Integer siteId);
 
     @Query(countQuery = "SELECT count(*) from lemma WHERE site_id = :id", nativeQuery = true)
     List<LemmaEntity> findAllBySiteId(Integer id);

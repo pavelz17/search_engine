@@ -11,6 +11,7 @@ import java.util.List;
 @Getter
 @Setter
 @ToString(exclude = "site")
+@EqualsAndHashCode(of = {"id", "path"})
 @Builder
 @Entity
 @Table(name = "page", indexes = @Index(name = "path_index", columnList = "path"))
@@ -45,6 +46,10 @@ public class PageEntity {
 
     public void addIndex(IndexEntity index) {
         indexes.add(index);
+    }
+
+    public void addAllIndexes(List<IndexEntity> indexList) {
+        indexes.addAll(indexList);
     }
 }
 

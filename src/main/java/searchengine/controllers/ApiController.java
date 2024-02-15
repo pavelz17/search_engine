@@ -42,7 +42,7 @@ public class ApiController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<BaseResponse> search(@RequestParam String query,
+    public ResponseEntity<BaseResponse> search(@RequestParam(required = false) String query,
                                                @RequestParam(required = false) String site,
                                                @RequestParam(defaultValue = DEFAULT_OFFSET) Integer offset,
                                                @RequestParam(defaultValue = DEFAULT_LIMIT) Integer limit) {
