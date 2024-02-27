@@ -3,7 +3,7 @@
   It also represents itself as a Spring application that works with a local MySQL database.
 
 ## Landing HomePage
-![Screenshot] (https://github.com/pavelz17/search_engine/blob/master/Screenshot%202024-02-27%20153120.png)
+![Screenshot](https://github.com/pavelz17/search_engine/blob/master/Screenshot%202024-02-27%20153120.png)
 
 
 # Description
